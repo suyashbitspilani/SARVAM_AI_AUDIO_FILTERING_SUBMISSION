@@ -1,0 +1,150 @@
+# Audio Filtering Pipeline Configuration
+# Configuration for filtering IndicVoices dataset
+
+# Dataset settings
+dataset:
+  name: "ai4bharat/IndicVoices"
+  languages:
+    - "hindi"
+    - "bengali" 
+    - "tamil"
+    - "telugu"
+    - "marathi"
+    - "gujarati"
+    - "kannada" 
+    - "malayalam"
+    - "punjabi"
+    - "odia"
+    # Uncomment to add more languages:
+    # - "assamese"
+    # - "bodo"
+    # - "dogri"
+    # - "kashmiri"
+    # - "konkani"
+    # - "maithili"
+    # - "manipuri"
+    # - "nepali"
+    # - "sanskrit"
+    # - "santali"
+    # - "sindhi"
+    # - "urdu"
+
+# Processing settings
+processing:
+  n_workers: 7  # Number of parallel workers (adjust based on CPU cores)
+  batch_size: 1000  # Checkpoint every N files
+  audio_sr: 16000  # Target sampling rate for processing
+
+# Directory paths
+paths:
+  checkpoint_dir: "./checkpoints"
+  metrics_dir: "./metrics"
+  output_dir: "./filtered_data"
+
+# Metric computation settings
+metrics:
+  # Core signal metrics
+  compute_snr: true
+  compute_clipping: true
+  compute_silence: true
+  compute_energy: true
+  compute_speaking_rate: true
+  
+  # Spectral metrics
+  compute_spectral: true
+  compute_pitch: true
+  compute_mfcc: false  # Set to true if needed (increases processing time)
+  
+  # Advanced metrics (require additional libraries)
+  compute_hnr: false  # Set to true if parselmouth installed
+  compute_dnsmos: false  # Set to true if dnsmos installed
+  compute_asr_quality: false  # Very expensive, only for small datasets
+  compute_lang_id: false  # Set to true if language ID model available
+
+# Outlier detection settings
+outlier_detection:
+  # Thresholds for statistical methods
+  modified_zscore_threshold: 3.5  # Conservative: 4.0, Aggressive: 3.0
+  iqr_multiplier: 1.5  # Conservative: 2.5, Aggressive: 1.0
+  
+  # Ensemble weights for combining methods
+  ensemble_weights:
+    zscore: 0.5
+    iqr: 0.5
+
+# Filtering thresholds and rules
+filtering:
+  # Hard filters - automatic rejection criteria
+  hard_filters:
+    max_clipping_ratio: 0.01  # Reject if >1% of samples are clipped
+    min_duration: 1.0  # Minimum duration in seconds
+    max_duration: 30.0  # Maximum duration in seconds  
+    min_snr: -5.0  # Minimum SNR in dB
+    max_silence_ratio: 0.8  # Reject if >80% silence
+    min_active_speech: 0.5  # Minimum active speech duration in seconds
+    min_rms_energy: 0.001  # Minimum RMS energy threshold
+    min_peak_amplitude: 0.01  # Minimum peak amplitude
+    min_spectral_centroid: 1000  # Minimum spectral centroid (Hz)
+    max_spectral_centroid: 8000  # Maximum spectral centroid (Hz)
+    min_lang_confidence: 0.5  # Minimum language ID confidence (if available)
+  
+  # Soft filters - percentile-based filtering  
+  percentile_threshold: 70  # Keep top 70% of samples by outlier score
+  
+  # Contextual filtering thresholds
+  speaker_outlier_threshold: 0.5  # Outlier score threshold for speaker analysis
+  speaker_outlier_rate_threshold: 0.5  # Flag speakers with >50% outlier samples
+  district_outlier_threshold: 0.5  # Outlier score threshold for district analysis  
+  district_outlier_rate_threshold: 0.7  # Flag districts with >70% outlier samples
+  min_samples_per_group: 5  # Minimum samples needed for group-level analysis
+  
+  # Language-specific overrides (more lenient for low-resource languages)
+  language_overrides:
+    sanskrit:
+      percentile_threshold: 80  # Keep top 80% instead of 70%
+    dogri:
+      percentile_threshold: 80
+    kashmiri: 
+      percentile_threshold: 80
+    santali:
+      percentile_threshold: 80
+    bodo:
+      percentile_threshold: 80
+    konkani:
+      percentile_threshold: 75
+    maithili:
+      percentile_threshold: 75
+    manipuri:
+      percentile_threshold: 75
+    sindhi:
+      percentile_threshold: 75
+
+# Stratification for computing statistics
+stratification:
+  primary: ["lang", "task_name"]  # Primary grouping for outlier detection
+  secondary: ["gender", "age_group"]  # Optional additional grouping
+
+# Analysis and reporting
+reporting:
+  generate_plots: true  # Generate visualization plots
+  generate_summary: true  # Generate text summary
+  save_rejected_samples: true  # Keep log of rejected samples for review
+  
+# Logging configuration
+logging:
+  level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+  
+# Advanced options
+advanced:
+  # Memory optimization
+  low_memory_mode: false  # Process smaller batches if memory constrained
+  
+  # Quality assurance
+  sample_validation: true  # Validate random samples after filtering
+  validation_sample_size: 1000  # Number of samples to validate
+  
+  # Export options
+  export_for_training: true  # Export train/val/test splits
+  train_split_ratio: 0.8
+  val_split_ratio: 0.1 
+  test_split_ratio: 0.1
